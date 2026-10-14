@@ -51,8 +51,17 @@ dependencies and directory junctions** — real directories only.
 2. Scroll to the bottom and find the **Model visibility** panel.
 3. Untick the models you do not want to see.
 
-The panel header shows `Showing N/M`; each provider gets a card whose title carries
-the number hidden in that group. Three buttons: **Show all**, **Hide all**, **Reload**.
+The panel header shows `Showing N/M`; each provider gets a card. Five buttons:
+**Show all**, **Hide all**, **Expand all**, **Collapse all**, **Reload**.
+
+### Collapsing a group
+
+Click a provider card's **title row** to fold or unfold that group: the chevron rotates and
+the title shows the group's model count (or the number hidden, when any are). The folded
+state is remembered across reloads.
+
+Collapsing is purely a **reading aid** — it hides no models and does not affect the selector
+menu at all. Reach for **Collapse all** when a dozen providers make the panel long.
 
 Changes take effect immediately — no refresh needed.
 
@@ -69,6 +78,10 @@ This section explains why the plugin is built the way it is, and when it degrade
 Key `dsh-model-whitelist/v1`, scoped to the browser and the Web address. It is **not**
 written to `settings.yaml`, does not modify any provider configuration, and is not
 uploaded anywhere. Clearing site data clears the whitelist with it.
+
+It keeps two maps: `hidden` (models kept out of the selector) and `collapsed` (provider
+cards folded in the panel). They are separate on purpose — folding is a reading aid and
+must never be confused with hiding models.
 
 It persists the *hidden* set rather than the *shown* set, so a model the user has
 never seen — a new release, a newly connected provider — is visible by default.
@@ -140,9 +153,13 @@ Not verified against the 0.1.x line.
 - The panel reads the catalog when it opens and subscribes to later changes. If a
   provider's model list loads lazily, trigger a load once (open the model selector)
   before the models appear in the panel.
-- The whitelist is scoped to the browser and address. Changing the port, switching
-  browsers, or clearing site data loses it.
-- There is no per-provider bulk action beyond Show all / Hide all.
+- The whitelist and the collapse state are scoped to the browser and address. Changing the
+  port, switching browsers, or clearing site data loses them.
+- There is no per-provider bulk action beyond Show all / Hide all. **Collapse** can fold a
+  whole group away, but it does not change which models are visible.
+- Collapsing exists only in the settings panel. The selector menu itself is rendered by the
+  official component; folding there would mean shadowing shipped UI
+  (`replaceRisk: shadows-shipped-ui`), which this plugin deliberately does not do.
 
 ## Development
 
@@ -152,8 +169,9 @@ node scripts/verify-client.mjs
 
 The script loads `lib/client.js` through a stubbed module table and a small renderer,
 then asserts that the factory and export shape are correct, that the `inject` array is
-present, that the slot registration targets `settings.models.footer`, and that the
-**projection really does remove hidden models** — while covering the degraded paths:
+present, that the slot registration targets `settings.models.footer`, that the
+**projection really does remove hidden models**, and that **collapsing affects only
+rendering — never the hidden set or the selector** — while covering the degraded paths:
 empty and malformed snapshots, a missing service, and refused local storage.
 
 ## License

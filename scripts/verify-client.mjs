@@ -386,6 +386,121 @@ check('the unfiltered catalog stays reachable for the panel', () => {
   if (!labels.includes('M2')) throw new Error('hidden model is missing from the panel, so it could never be restored')
 })
 
+console.log('\n=== collapse (panel reading aid) ===')
+
+/** Find the first element whose props carry the given `aria-expanded`. */
+function findToggle(node) {
+  if (node === null || node === undefined) return undefined
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const hit = findToggle(child)
+      if (hit !== undefined) return hit
+    }
+    return undefined
+  }
+  if (typeof node !== 'object') return undefined
+  if (node.props?.onClick !== undefined && node.props['aria-expanded'] !== undefined) return node
+  if (Array.isArray(node.children)) return findToggle(node.children)
+  return undefined
+}
+
+/** Count the model checkboxes currently rendered. */
+function countCheckboxes(node) {
+  if (node === null || node === undefined) return 0
+  if (Array.isArray(node)) return node.reduce((n, child) => n + countCheckboxes(child), 0)
+  if (typeof node !== 'object') return 0
+  let total = node.type === 'input' && node.props?.type === 'checkbox' ? 1 : 0
+  if (Array.isArray(node.children)) total += countCheckboxes(node.children)
+  return total
+}
+
+check('collapsed state persists across a reload', () => {
+  const storage = {
+    _data: {
+      'dsh-model-whitelist/v1': JSON.stringify({ hidden: {}, collapsed: { alpha: true } }),
+    },
+    getItem(key) {
+      return this._data[key] ?? null
+    },
+    setItem(key, value) {
+      this._data[key] = String(value)
+    },
+    removeItem(key) {
+      delete this._data[key]
+    },
+  }
+  const live = makeCatalog(snapshot())
+  const { module: fresh, sandbox } = loadPlugin({ storage })
+  const liveCtx = makeContext({ catalog: live })
+  fresh.apply(liveCtx)
+  for (const tick of sandbox.__timers) tick()
+  const tree = liveCtx.seat.component({})
+  const toggles = []
+  const collect = (node) => {
+    if (node === null || node === undefined) return
+    if (Array.isArray(node)) return node.forEach(collect)
+    if (typeof node !== 'object') return
+    if (node.props?.['aria-expanded'] !== undefined) toggles.push(node.props['aria-expanded'])
+    if (Array.isArray(node.children)) node.children.forEach(collect)
+  }
+  collect(tree)
+  // Two provider cards: alpha collapsed (aria-expanded false), beta expanded.
+  eq(toggles, [false, true], 'aria-expanded per card')
+})
+check('a folded card renders no checkboxes for its models', () => {
+  const storage = {
+    _data: {
+      'dsh-model-whitelist/v1': JSON.stringify({ hidden: {}, collapsed: { alpha: true } }),
+    },
+    getItem(key) {
+      return this._data[key] ?? null
+    },
+    setItem(key, value) {
+      this._data[key] = String(value)
+    },
+    removeItem(key) {
+      delete this._data[key]
+    },
+  }
+  const live = makeCatalog(snapshot())
+  const { module: fresh, sandbox } = loadPlugin({ storage })
+  const openCtx = makeContext({ catalog: live })
+  fresh.apply(openCtx)
+  for (const tick of sandbox.__timers) tick()
+  // alpha holds m1+m2, beta holds m3. Folded alpha leaves only m3 visible.
+  eq(countCheckboxes(openCtx.seat.component({})), 1, 'visible checkboxes')
+})
+check('toggling a card folds it without hiding its models', () => {
+  const storage = {
+    _data: { 'dsh-model-whitelist/v1': JSON.stringify({ hidden: {}, collapsed: {} }) },
+    getItem(key) {
+      return this._data[key] ?? null
+    },
+    setItem(key, value) {
+      this._data[key] = String(value)
+    },
+    removeItem(key) {
+      delete this._data[key]
+    },
+  }
+  const live = makeCatalog(snapshot())
+  const { module: fresh, sandbox } = loadPlugin({ storage })
+  const liveCtx = makeContext({ catalog: live })
+  fresh.apply(liveCtx)
+  for (const tick of sandbox.__timers) tick()
+  eq(countCheckboxes(liveCtx.seat.component({})), 3, 'all checkboxes before folding')
+  const toggle = findToggle(liveCtx.seat.component({}))
+  if (toggle === undefined) throw new Error('no collapsible header found')
+  toggle.props.onClick()
+  eq(countCheckboxes(liveCtx.seat.component({})), 1, 'checkboxes after folding alpha')
+  // Folding is a display concern: nothing may enter the hidden set.
+  const stored = JSON.parse(storage._data['dsh-model-whitelist/v1'])
+  eq(stored.hidden, {}, 'hidden set untouched by folding')
+  eq(stored.collapsed, { alpha: true }, 'collapsed set recorded')
+  // The selector still sees every model.
+  eq(visible(live), [['m1', 'm2'], ['m3']], 'selector unaffected by folding')
+})
+
 console.log('\n=== degradation ===')
 check('no catalog service: apply and render still work', () => {
   const solo = loadPlugin().module
