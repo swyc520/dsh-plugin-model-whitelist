@@ -177,3 +177,5 @@ empty and malformed snapshots, a missing service, and refused local storage.
 ## License
 
 MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Release history: [CHANGELOG.md](CHANGELOG.md).

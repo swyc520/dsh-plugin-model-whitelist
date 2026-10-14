@@ -149,3 +149,5 @@ node scripts/verify-client.mjs
 ## 许可证
 
 MIT。见 [LICENSE](LICENSE) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+版本变更见 [CHANGELOG.md](CHANGELOG.md)。

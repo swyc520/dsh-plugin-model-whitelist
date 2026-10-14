@@ -1,6 +1,6 @@
 {
   "name": "@swyc520/dsh-plugin-model-whitelist",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "description": "DeepSeek Harness plugin: whitelist which models appear in the composer model selector. 在 DSH 的模型选择器里按模型勾选显示/隐藏，未勾选的模型不再出现在列表中。",
   "type": "module",
@@ -16,6 +16,7 @@
     "lib",
     "cordis.patch.yml",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "keywords": [
